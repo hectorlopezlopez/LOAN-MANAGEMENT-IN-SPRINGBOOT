@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "Accounts")
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "accountId")
+//@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "accountId")
 public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,8 +22,8 @@ public class Account {
     private Role role;
 
     // Mapper:
+    @JsonBackReference
     @OneToOne(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
     private User user;
 
     public Account() {}

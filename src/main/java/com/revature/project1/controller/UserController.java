@@ -5,6 +5,8 @@ import com.revature.project1.Entities.User;
 import com.revature.project1.service.UserServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +19,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/users")
 public class UserController {
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final UserServiceImpl userService;
 
@@ -31,13 +34,16 @@ public class UserController {
             Account account = (Account) httpSession.getAttribute("newAccount");
             if (account.getRole().getRoleId() == 2) {
                 List<User> users = userService.getUsers();
+                logger.info("Manager requested all users");
                 return ResponseEntity.ok(users);
             }
             else {
+                logger.warn("Unauthorized action (getUsers) attempt by user: {} with role ID: {}", account.getUsername(), account.getRole().getRoleId());
                 return ResponseEntity.ok("error: You have no permission to take this action!");
             }
         }
         else{
+            logger.warn("No active session found for request: {}", httpServletRequest.getRequestURI());
             return ResponseEntity.ok("error: Invalid action (no session is in progress)!");
         }
     }
@@ -48,17 +54,21 @@ public class UserController {
             HttpSession httpSession = httpServletRequest.getSession(false);
             Account account = (Account) httpSession.getAttribute("newAccount");
             if (account.getRole().getRoleId() == 2) {
+                logger.info("Manager requested loans by ID: {}", id);
                 Optional<User> user = userService.getUserById(id);
                 if(user.isPresent()){
                     return ResponseEntity.ok(user.orElseThrow());
                 }else{
+                    logger.error("User not found for accountId: {}", account.getAccountId());
                     return ResponseEntity.ok("error: No user found!");
                 }
             } else {
+                logger.warn("Unauthorized action (getUserById) attempt by user: {} with role ID: {}", account.getUsername(), account.getRole().getRoleId());
                 return ResponseEntity.ok("error: You have no permission to take this action!");
 
             }
         }else{
+            logger.warn("No active session found for request: {}", httpServletRequest.getRequestURI());
             return ResponseEntity.ok("error: Invalid action (no session is in progress)!");
         }
     }
@@ -72,12 +82,15 @@ public class UserController {
             //Validate if this account already created a user
             if(userFromDB == null){
                 User userResponse = userService.createUser(user);
+                logger.info("New user created by  account ID: {}", account.getUsername());
                 return ResponseEntity.status(HttpStatus.CREATED).body(userResponse);
             } else{
+                logger.warn("Attempt to createUser with an existing account: {} already owns a profile", account.getUsername());
                 return ResponseEntity.ok("error: This account already owns an user profile");
             }
         }
         else{
+            logger.warn("No active session found for request: {}", httpServletRequest.getRequestURI());
             return ResponseEntity.ok("error: Invalid action (no session is in progress)!");
         }
     }
@@ -103,6 +116,7 @@ public class UserController {
                 }
             }
         } else {
+            logger.warn("No active session found for request: {}", request.getRequestURI());
             return ResponseEntity.ok("error: Invalid action (no session is in progress)!");
         }
     }
@@ -115,12 +129,14 @@ public class UserController {
             if (account.getRole().getRoleId() == 2) {
                 //Manager can update any user
                 User updatedUser = userService.updateUser(id, user);
+                logger.info("Updating user ID: {} by manager: {}", id, account.getUsername());
                 return ResponseEntity.ok(updatedUser);
             } else{
                 User userFromDB = (User) userService.findByAccountId(account.getAccountId());
                 if(userFromDB != null){
                     if(account.getAccountId() == userFromDB.getAccount().getAccountId()){
                         User updatedUser = userService.updateUser(id, user);
+                        logger.info("Updating user ID: {} by customer: {}", id, account.getUsername());
                         return ResponseEntity.ok(updatedUser);
                     } else{
                         return ResponseEntity.ok("error: This account does not own this user profile");
@@ -130,6 +146,7 @@ public class UserController {
                 }
             }
         } else{
+            logger.warn("No active session found for request: {}", httpServletRequest.getRequestURI());
             return ResponseEntity.ok("error: Invalid action (no session is in progress)!");
         }
     }
@@ -141,6 +158,7 @@ public class UserController {
             Account account = (Account) httpSession.getAttribute("newAccount");
             User userFromDB = userService.findByAccountId(account.getAccountId());
             if (userFromDB==null ){
+                logger.error("User not found for accountId: {}", account.getAccountId());
                 return ResponseEntity.ok("error: User not found !");
             }
 
@@ -149,10 +167,12 @@ public class UserController {
             userFromDB.setLastName(user.getLastName());
             userFromDB.setEmail(user.getEmail());
             userFromDB.setCreatedAt(user.getCreatedAt());
+            logger.info("Updating user by: {}", account.getUsername());
             User updatedUser = userService.updateUser(userFromDB.getIdUser(),userFromDB);
             return ResponseEntity.ok(updatedUser);
         }
         else{
+            logger.warn("No active session found for request: {}", httpServletRequest.getRequestURI());
             return ResponseEntity.ok("error: Invalid action (no session is in progress)!");
         }
     }
@@ -164,12 +184,15 @@ public class UserController {
             Account account = (Account) httpSession.getAttribute("newAccount");
             User userFromDB = userService.findByAccountId(account.getAccountId());
             if (userFromDB==null ){
+                logger.error("User not found for accountId: {}", account.getAccountId());
                 return ResponseEntity.ok("error: User not found !");
             }
+            logger.info("User requested my user");
             Optional<User> updatedUser = userService.getMyUserInfo(userFromDB.getIdUser());
             return ResponseEntity.ok(updatedUser);
         }
         else{
+            logger.warn("No active session found for request: {}", httpServletRequest.getRequestURI());
             return ResponseEntity.ok("error: Invalid action (no session is in progress)!");
         }
     }
